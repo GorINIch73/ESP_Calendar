@@ -135,7 +135,7 @@ void drawCalendar(int month, int year, int currentDay) {
   tft.print(year);
 
   // Отображение дней недели
-  const char* daysOfWeek[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+  const char* daysOfWeek[] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};  //сместил так как неделя с понедельника
   for (int i = 0; i < 7; i++) {
     tft.setCursor(10 + i * 45, 40);
     tft.print(daysOfWeek[i]);
@@ -147,8 +147,12 @@ void drawCalendar(int month, int year, int currentDay) {
   for (int day = 1; day <= daysInMonth; day++) {
     if (day == currentDay) {
       tft.setTextColor(TFT_BLACK, TFT_YELLOW); // Выделение текущего дня
-    } else {
-      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    }
+    else {
+      if (dayOfWeek == 5 || dayOfWeek==6)
+          tft.setTextColor(TFT_ORANGE, TFT_BLACK);  // если суббота воскресенье
+      else
+          tft.setTextColor(TFT_WHITE, TFT_BLACK);  // если обычный день
     }
 
 //    tft.setCursor(x + (firstDayOfMonth + dayOfWeek) * 30, y);
@@ -170,7 +174,7 @@ int getFirstDayOfMonth(int month, int year) {
   tm.Month = month;
   tm.Day = 1;
   time_t t = makeTime(tm);
-  return weekday(t) - 1; // Возвращает день недели (0 - воскресенье, 6 - суббота)
+  return weekday(t) - 2; // Возвращает день недели (0 - воскресенье, 6 - суббота) -2 сместили на 1 так как день начинаем с понедельника
 }
 
 int daysInMonthFunc(int month, int year) {
