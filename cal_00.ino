@@ -38,6 +38,9 @@
 #include <WiFiUdp.h> // To communicate with NTP server
 #include <Timezone.h>
 #include <NTPClient.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+
 
 
 //#include <time.h>
@@ -51,6 +54,12 @@ const char* password = "09061973"; // Замените на пароль от в
 // Настройки NTP
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", 10800, 60000); // 10800 — смещение для GMT+3 (Москва)
+
+
+// Настройки OpenWeatherMap
+const String apiKey = "715eb8e0b9bdd106c145969ca601feb6"; // Ваш API-ключ от OpenWeatherMap
+const String city = "Moscow";         // Город, для которого нужно получить погоду
+const String countryCode = "RU";      // Код страны (опционально)
 
 
 void setup() {
@@ -87,7 +96,6 @@ void setup() {
   setTime(timeClient.getEpochTime());
 
 
-
 //  setTime(12, 0, 0, 31, 01, 2025); // Установите текущее время: часы, минуты, секунды, день, месяц, год
 
 
@@ -95,31 +103,75 @@ void setup() {
 
   // Отображение календаря
   drawCalendar(month(), year(), day());
+
+  //  Погода
+  getWeather();
+
 }
 
+
+unsigned long tick=0; // отслеживание тиков
+
 void loop() {
-  // Основной цикл пуст, так как календарь отображается один раз
+  // Основной цикл 
+  tick++;
 
-  // Обновление времени каждую минуту
-  timeClient.update();
 
-  // Получение текущего времени
-  unsigned long epochTime = timeClient.getEpochTime();
-  setTime(epochTime); // Обновление времени в TimeLib
+  // Получение погоды
+  if (tick%300 == 0) {
+    getWeather();
+  }
+   
 
-  // Вывод времени на Serial Monitor
-  printTime();
+  // отображение полного календаря каждые 100 тиков
+  if (tick%60 == 0) {
+    int oldDay = day();
+    int oldYear = year();
+    int oldMoth = month();
 
-  delay(1000); // Задержка 1 секунда
+   // Serial.println("Update calendar");
+    timeClient.update();
+    setTime(timeClient.getEpochTime());
+    if (oldDay!=day() || oldYear!=year() || oldMoth!=month()) { // если изменился день или месяц или год надо перерисовать календарь
+      tft.fillScreen(TFT_BLACK);
+      drawCalendar(month(), year(), day());
+    }
+  }
+
+
+ // Serial.print(tick%10);
+
+  // Получение текущего времени каждые 10 тиков
+  if (tick%10 == 0) {
+ //   Serial.println("Update time");
+    setTime(timeClient.getEpochTime());
+  }
+
+  // вывод времени каждый тик
+  if (tick%1 == 0) {
+    printTime();
+  }
+
+
+  delay(1000); // общая задержка 1 секунда
 
 }
 
 void drawCalendar(int month, int year, int currentDay) {
   int dayOfWeek = getFirstDayOfMonth(month, year);
   //int dayOfWeek = 3;
-  Serial.print(dayOfWeek); 
+  /*
+  Serial.print("Year="); 
+  Serial.println(year); 
+  Serial.print("Month="); 
+  Serial.println(month); 
+  Serial.print("dayOfWeek="); 
+  Serial.println(dayOfWeek); 
+  */
 
   int daysInMonth = daysInMonthFunc(month, year);
+  //Serial.print("daysInMonth="); 
+ // Serial.println(daysInMonth); 
  // int firstDayOfMonth = getFirstDayOfMonth(month, year);
 
   tft.setTextSize(2);
@@ -127,15 +179,18 @@ void drawCalendar(int month, int year, int currentDay) {
 
   // Отображение названия месяца и года
   tft.setCursor(10, 10);
+  tft.setTextColor(TFT_GREEN, TFT_BLACK);
   tft.print(getMonthName(month));
   
-  Serial.print(month); 
+  //Serial.print(month); 
   
   tft.print(" ");
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
   tft.print(year);
 
   // Отображение дней недели
   const char* daysOfWeek[] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};  //сместил так как неделя с понедельника
+  tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
   for (int i = 0; i < 7; i++) {
     tft.setCursor(10 + i * 45, 40);
     tft.print(daysOfWeek[i]);
@@ -169,12 +224,21 @@ void drawCalendar(int month, int year, int currentDay) {
 }
 
 int getFirstDayOfMonth(int month, int year) {
-  tmElements_t tm;
-  tm.Year = CalendarYrToTm(year);
-  tm.Month = month;
-  tm.Day = 1;
-  time_t t = makeTime(tm);
-  return weekday(t) - 2; // Возвращает день недели (0 - воскресенье, 6 - суббота) -2 сместили на 1 так как день начинаем с понедельника
+
+  // Использование алгоритма Зеллера
+  
+    if (month < 3) {
+      month += 12;
+      year--;
+    }
+    int q = 1; // первый день
+    int m = month;
+    int K = year % 100;
+    int J = year / 100;
+    //int h = (q + (13 * (m + 1)) / 5 + K + (K / 4) + (J / 4) + 5 * J) % 7; // 0 = суббота, 1 = воскресенье, 2 = понедельник, ..., 6 = пятница
+    int h = (q + (13 * (m + 1)) / 5 + K + (K / 4) + (J / 4) + 5 * J + 5) % 7; // 0 = понедельник, ..., 6 = вовкрксенье
+    return h;
+  
 }
 
 int daysInMonthFunc(int month, int year) {
@@ -212,25 +276,90 @@ void printTime() {
   char buffer[10]; // Буфер для хранения форматированной строки
   snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", hourNow, minuteNow, secondNow );
 
+
+  tft.drawRect(180,0,135,35,TFT_DARKGREY);
+
   tft.setTextSize(2);
   tft.setTextColor(TFT_RED , TFT_BLACK);
   tft.setCursor(x,10);
   tft.print(buffer);
 
 
-  // Вывод времени
-  // Serial.print("Текущее время: ");
-  // Serial.print(hourNow);
-  // Serial.print(":");
-  // if (minuteNow < 10) Serial.print("0");
-  // Serial.print(minuteNow);
-  // Serial.print(":");
-  // if (secondNow < 10) Serial.print("0");
-  // Serial.print(secondNow);
-  // Serial.print(" ");
-  // Serial.print(dayNow);
-  // Serial.print(".");
-  // Serial.print(monthNow);
-  // Serial.print(".");
-  // Serial.println(yearNow);
+}
+
+
+void getWeather() {
+  // Формируем URL для запроса
+  String url = "http://api.openweathermap.org/data/2.5/weather?q=" + city + "," + countryCode + "&appid=" + apiKey + "&units=metric&lang=en";
+
+//  String ss;
+
+
+  // Отправляем HTTP-запрос
+  HTTPClient http;
+  Serial.println("Запрос ");
+  Serial.println(url);
+
+  http.begin(url);
+  int httpCode = http.GET();
+  delay(200);
+
+  // Проверяем код ответа
+  if (httpCode == HTTP_CODE_OK) {
+    // Получаем JSON-ответ
+    String payload = http.getString();
+    Serial.println("Ответ от сервера:");
+    Serial.println(payload);
+
+    // Парсим JSON
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, payload);
+
+    // Извлекаем данные о погоде
+    String weatherDescription = doc["weather"][0]["description"].as<String>();
+    float temperature = doc["main"]["temp"].as<float>();
+    float humidity = doc["main"]["humidity"].as<float>();
+
+    // Выводим данные в Serial Monitor
+    Serial.println("Погода в " + city + ":");
+    Serial.println("Описание: " + weatherDescription);
+    Serial.println("Температура: " + String(temperature) + " °C");
+    Serial.println("Влажность: " + String(humidity) + " %");
+
+   // ss = " "+ weatherDescription + " " + temperature + "C " + humidity +"%" ;
+    // вывод данных
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_GREEN , TFT_BLACK);
+    tft.setCursor(5,225);
+    tft.print(weatherDescription);
+    tft.print(" ");
+    
+    tft.setCursor(130,220);
+    tft.setTextSize(2);
+    tft.setTextColor(TFT_SKYBLUE , TFT_BLACK);
+    tft.print(temperature);
+    tft.setTextColor(TFT_GREEN , TFT_BLACK);
+    tft.print("C   ");
+    tft.setTextColor(TFT_SKYBLUE , TFT_BLACK);
+    tft.print(humidity);
+    tft.setTextColor(TFT_GREEN , TFT_BLACK);
+    tft.print("%");
+
+    //tft.print(ss);
+
+
+
+
+  } else {
+    Serial.println("Ошибка при запросе: " + String(httpCode));
+    
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_GREEN , TFT_BLACK);
+    tft.setCursor(5,220);
+    tft.print("NO DATA");
+  }
+
+  // Закрываем соединение
+  http.end();
+
 }
