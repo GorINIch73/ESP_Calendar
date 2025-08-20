@@ -48,7 +48,7 @@
 TFT_eSPI tft = TFT_eSPI();
 
 // Настройки Wi-Fi
-const char* ssid = "GL-GORINICH";       // Замените на имя вашей Wi-Fi сети
+const char* ssid = "GL-Gor-TR";       // Замените на имя вашей Wi-Fi сети
 const char* password = "09061973"; // Замените на пароль от вашей Wi-Fi сети
 
 // Настройки NTP
@@ -118,13 +118,13 @@ void loop() {
 
 
   // Получение погоды
-  if (tick%300 == 0) {
+  if (tick%600 == 0) {
     getWeather();
   }
    
 
-  // отображение полного календаря каждые 100 тиков
-  if (tick%60 == 0) {
+  // отображение полного календаря каждые 60 тиков
+  if (tick%600 == 0) {
     int oldDay = day();
     int oldYear = year();
     int oldMoth = month();
@@ -142,18 +142,18 @@ void loop() {
  // Serial.print(tick%10);
 
   // Получение текущего времени каждые 10 тиков
-  if (tick%10 == 0) {
+  if (tick%100 == 0) {
  //   Serial.println("Update time");
     setTime(timeClient.getEpochTime());
   }
 
   // вывод времени каждый тик
-  if (tick%1 == 0) {
+  if (tick%10 == 0) {
     printTime();
   }
 
 
-  delay(1000); // общая задержка 1 секунда
+  delay(100); // общая задержка 1 секунда
 
 }
 
@@ -354,9 +354,9 @@ void getWeather() {
     Serial.println("Ошибка при запросе: " + String(httpCode));
     
     tft.setTextSize(1);
-    tft.setTextColor(TFT_GREEN , TFT_BLACK);
-    tft.setCursor(5,220);
-    tft.print("NO DATA");
+    tft.setTextColor(TFT_RED , TFT_BLACK);
+    tft.setCursor(5,225);
+    tft.print(" - no data  -    ");
   }
 
   // Закрываем соединение
