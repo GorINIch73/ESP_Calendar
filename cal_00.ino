@@ -48,8 +48,8 @@
 TFT_eSPI tft = TFT_eSPI();
 
 // Настройки Wi-Fi
-const char* ssid = "GL-Gor-TR";       // Замените на имя вашей Wi-Fi сети
-const char* password = "09061973"; // Замените на пароль от вашей Wi-Fi сети
+const char* ssid = "SSDI";       // Замените на имя вашей Wi-Fi сети
+const char* password = "PASSWD"; // Замените на пароль от вашей Wi-Fi сети
 
 // Настройки NTP
 WiFiUDP ntpUDP;
