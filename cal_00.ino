@@ -48,12 +48,13 @@
 TFT_eSPI tft = TFT_eSPI();
 
 // Настройки Wi-Fi
-const char* ssid = "SSDI";       // Замените на имя вашей Wi-Fi сети
-const char* password = "PASSWD"; // Замените на пароль от вашей Wi-Fi сети
+const char* ssid = "GL-Gor-TR";       // Замените на имя вашей Wi-Fi сети
+const char* password = "xxx"; // Замените на пароль от вашей Wi-Fi сети
 
 // Настройки NTP
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", 10800, 60000); // 10800 — смещение для GMT+3 (Москва)
+NTPClient timeClient(ntpUDP, "ntp0.ntp-servers.net", 10800, 60000); // 10800 — смещение для GMT+3 (Москва)
+//NTPClient timeClient(ntpUDP, "pool.ntp.org", 10800, 60000); // 10800 — смещение для GMT+3 (Москва)
 
 
 // Настройки OpenWeatherMap
@@ -92,6 +93,8 @@ void setup() {
   timeClient.begin();
   timeClient.update();
 
+  delay(500); // Задержка 
+  
   // Установка времени в библиотеку TimeLib
   setTime(timeClient.getEpochTime());
 
